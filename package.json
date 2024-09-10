@@ -1,7 +1,7 @@
 {
-    "name": "dev-vs-ciso-implementing-jwt",
+    "name": "dev-vs-ciso-algo-check-jwt",
     "version": "1.0.0",
-    "description": "Implementing JWT in Node.js",
+    "description": "Using different algorithms to sign JWT in Node.js",
     "main": "dist/app.js",
     "scripts": {
         "render": "tsc && node dist/app.js",

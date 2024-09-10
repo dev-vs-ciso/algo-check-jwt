@@ -30,14 +30,36 @@ export async function generateJwt<T>(payload: T): Promise<string> {
   return `${headerEnc}.${payloadEnc}.${signature}`;
 }
 
+const verifications: Record<string, (token: string, keys: any) => boolean> = {
+  "none": () => true,
+  "HS256": (token: string, secret: string) => {
+      const algorithm = 'sha256';
+      const [headerB64, payloadB64, signatureB64] = token.split('.');
+      const signature = toBase64(hmac(`${headerB64}.${payloadB64}`, secret, algorithm));
+      return signature === signatureB64;
+  }
+}
+
 export function verifyJwt<T>(token: string): VerificationResult<T> {
-  const [header, payload, signature] = token.split('.');
-  if (!header || !payload || !signature) {
+  const [headerB64, payloadB64, signatureB64] = token.split('.');
+  const secretKey = process.env.JWT_SECRET || 'we-love-what-the-stack';
+
+  if (!headerB64 || !payloadB64 || !signatureB64) {
+    return { status: 'failed' };
+  }
+
+  const headerStr = Buffer.from(headerB64, 'base64').toString();
+  const header = JSON.parse(headerStr);
+  let verified = false;
+  if (header.alg in verifications) {
+      verified = verifications[header.alg](token, secretKey);
+  }
+  if (!verified) {
     return { status: 'failed' };
   }
 
   return { 
     status: 'success', 
-    payload: JSON.parse(Buffer.from(payload, 'base64').toString()) 
+    payload: JSON.parse(Buffer.from(payloadB64, 'base64').toString()) 
   };
 }

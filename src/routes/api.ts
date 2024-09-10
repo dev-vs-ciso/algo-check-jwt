@@ -11,39 +11,46 @@ router.get('/hello', (req, res) => {
 });
 
 router.get('/me', (req, res) => {
-  // get the jwt from the request
+  if (!req.cookies.jwt) {
+    console.error('No user cookie found');
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  console.log(`Found user cookie (it should be a JWT): ${req.cookies.jwt}`);
+  const verification = verifyJwt<User>(req.cookies.jwt);
+  if (verification.status === 'failed') {
+    return res.status(403).json({ error: 'Verification failed' });
+  }
 
-  // if there is no jwt, return 401
-
-  // if there is a jwt, verify it
-
-  // if the verification fails, return 403
-
-  // if the verification succeeds, return the user data
+  res.send(verification.payload);
 });
 
 router.get('/secret', (req, res) => {
-  // get the jwt from the request
+  if (!req.cookies.jwt) {
+    console.error('No user cookie found');
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  const verification = verifyJwt<User>(req.cookies.jwt);
+  if (verification.status === 'failed') {
+    return res.status(403).json({ error: 'Verification failed' });
+  }
 
-  // if there is no jwt, return 401
+  const userData = users.find((user) => user.id === verification.payload.id);
 
-  // if there is a jwt, verify it
-
-  // if the verification fails, return 403
-
-  // if the verification succeeds, fetch the full user data, and return the secret
+  res.send( { secret: userData?.secret });
 });
 
 router.post('/login', async (req, res) => {
   const payload = req.body as Login;
   try {
     // locate user in "db"
+    const user = authenticate(payload);
+    if (!user) {
+      return res.status(403).json({ error: 'No such user' });
+    }
 
-    // if there is no user, return 403 / 404
-
-    // use the user data to generate a JWT
-
-    // send the JWT to the client
+    const token = await generateJwt(omit(user, "secret"));
+    res.header('Set-Cookie', `jwt=${token}; HttpOnly`);
+    res.sendStatus(204);
   } catch (error) {
     res.status(400).json({ error: 'Failed to generate JWT' });
   }
